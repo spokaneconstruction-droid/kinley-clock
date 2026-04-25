@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="KC Clock">
-<title>Kinley Construction â Time Clock</title>
+<title>Kinley Construction — Time Clock</title>
 <style>
   :root {
     --orange: #F47920;
@@ -153,7 +153,7 @@
 <div class="app">
   <div class="header">
     <div>
-      <div class="header-wordmark">Kinley<span class="header-dot"> â</span> Construction</div>
+      <div class="header-wordmark">Kinley<span class="header-dot"> ●</span> Construction</div>
       <div class="header-sub">Labor Time Clock</div>
     </div>
     <div>
@@ -179,7 +179,7 @@
         <div class="key" onclick="pk('1')">1</div><div class="key" onclick="pk('2')">2</div><div class="key" onclick="pk('3')">3</div>
         <div class="key" onclick="pk('4')">4</div><div class="key" onclick="pk('5')">5</div><div class="key" onclick="pk('6')">6</div>
         <div class="key" onclick="pk('7')">7</div><div class="key" onclick="pk('8')">8</div><div class="key" onclick="pk('9')">9</div>
-        <div class="key del" onclick="pk('del')">â«</div><div class="key" onclick="pk('0')">0</div><div class="key ghost"></div>
+        <div class="key del" onclick="pk('del')">⌫</div><div class="key" onclick="pk('0')">0</div><div class="key ghost"></div>
       </div>
       <div class="err" id="pin-err"></div>
     </div>
@@ -264,7 +264,7 @@
 </div><!-- app -->
 
 <script>
-// âââ Config âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Config ───────────────────────────────────────────────────────────────────
 const ORG_ID = '22P8NB5kStzY';
 
 const DEFAULT_CREW = [
@@ -286,12 +286,12 @@ const DEFAULT_CREW = [
   {id:'22PTJCvzwJaC',name:'Al Durazo',pin:'1016'},
 ];
 
-// âââ State ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── State ────────────────────────────────────────────────────────────────────
 let mode = 'in', pinEntry = '', currentUser = null, selectedSession = null;
 let crew = [], sessions = {}, adminPin = '1234', costItemsCache = {};
 let userLat = null, userLon = null, selectedJob = null, liveJobs = [];
 
-// âââ Storage ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Storage ──────────────────────────────────────────────────────────────────
 const S = {
   get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
@@ -306,7 +306,7 @@ function saveCrew() { S.set('kc-crew', crew); }
 function saveSessions() { S.set('kc-sessions', sessions); }
 function saveAdminPin() { S.set('kc-adminpin', adminPin); }
 
-// âââ Clock header âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Clock header ─────────────────────────────────────────────────────────────
 function updateClock() {
   const n = new Date();
   document.getElementById('hclock').textContent = n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -314,7 +314,7 @@ function updateClock() {
 }
 setInterval(updateClock, 1000); updateClock();
 
-// âââ PIN ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── PIN ──────────────────────────────────────────────────────────────────────
 function setMode(m) {
   mode = m;
   document.getElementById('btn-in').classList.toggle('active', m === 'in');
@@ -339,7 +339,7 @@ function verifyPin() {
   mode === 'in' ? showClockIn() : showClockOut();
 }
 
-// âââ Location âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Location ─────────────────────────────────────────────────────────────────
 function getLocation() {
   return new Promise(resolve => {
     if (!navigator.geolocation) { resolve(null); return; }
@@ -356,7 +356,7 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// âââ Clock In âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Clock In ─────────────────────────────────────────────────────────────────
 async function showClockIn() {
   showScreen('s-clockin');
   selectedJob = null;
@@ -370,10 +370,10 @@ async function showClockIn() {
   const [locResult, jobsResult] = await Promise.all([getLocation(), fetchLiveJobs()]);
   if (locResult) {
     locDot.className = 'loc-dot green';
-    locStatus.textContent = 'Location found â nearest jobs shown first';
+    locStatus.textContent = 'Location found — nearest jobs shown first';
   } else {
     locDot.className = 'loc-dot';
-    locStatus.textContent = 'Location unavailable â showing all jobs';
+    locStatus.textContent = 'Location unavailable — showing all jobs';
   }
   liveJobs = jobsResult;
   renderJobList(liveJobs);
@@ -458,10 +458,10 @@ async function submitClockIn() {
   showSuccessScreen('Clocked In!', currentUser.name + ' on ' + selectedJob.name, [{ label: 'Started at', value: fmtTime(now) }]);
 }
 
-// âââ Clock Out ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Clock Out ────────────────────────────────────────────────────────────────
 function showClockOut() {
   showScreen('s-clockout');
-  document.getElementById('co-name').textContent = 'Active sessions â ' + currentUser.name;
+  document.getElementById('co-name').textContent = 'Active sessions — ' + currentUser.name;
   const userSessions = sessions[currentUser.id] || [];
   const c = document.getElementById('co-sessions');
   if (!userSessions.length) { c.innerHTML = '<div class="no-items">No active clock-ins found.</div>'; return; }
@@ -471,7 +471,7 @@ function showClockOut() {
         <div class="session-job">${s.jobName}</div><span class="active-badge">ACTIVE</span>
       </div>
       <div class="session-meta">In at ${fmtTime(s.startedAt)} &bull; <span class="timer" id="t${i}"></span></div>
-      <div class="session-items">${s.costItems.map(c => c.name).join(' Â· ')}</div>
+      <div class="session-items">${s.costItems.map(c => c.name).join(' · ')}</div>
       <button class="btn btn-danger" style="margin-top:12px;padding:11px;" onclick="startSplit(${i})">Clock Out &amp; Split Time</button>
     </div>`).join('');
   userSessions.forEach((s, i) => { const el = document.getElementById('t' + i); if (el) startTimer(el, s.startedAt); });
@@ -485,12 +485,12 @@ function startTimer(el, startedAt) {
   tick(); setInterval(tick, 1000);
 }
 
-// âââ Split ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Split ────────────────────────────────────────────────────────────────────
 function startSplit(idx) {
   selectedSession = (sessions[currentUser.id] || [])[idx];
   showScreen('s-split');
   const hrs = elapsed(selectedSession.startedAt);
-  document.getElementById('sp-info').textContent = selectedSession.jobName + ' â In at ' + fmtTime(selectedSession.startedAt) + ' (' + hrs.toFixed(2) + ' hrs total)';
+  document.getElementById('sp-info').textContent = selectedSession.jobName + ' — In at ' + fmtTime(selectedSession.startedAt) + ' (' + hrs.toFixed(2) + ' hrs total)';
   const items = selectedSession.costItems;
   const even = Math.round(100 / items.length);
   document.getElementById('sp-items').innerHTML = items.map((c, i) => `
@@ -532,15 +532,15 @@ async function submitClockOut() {
     const hrs = totalHrs * pct / 100;
     try {
       await callJT({ query: { createTimeEntry: { '
-    } catch { errors++; results.push({ label: items[i].name + ' â ', value: 'Failed to save' }); }
+    } catch { errors++; results.push({ label: items[i].name + ' ⚠', value: 'Failed to save' }); }
   }
   sessions[currentUser.id] = (sessions[currentUser.id] || []).filter(s => s.key !== selectedSession.key);
   saveSessions();
   btn.disabled = false; btn.textContent = 'Submit & Clock Out';
-  showSuccessScreen(errors ? 'Partially Saved' : 'Time Logged!', currentUser.name + ' â ' + selectedSession.jobName, results);
+  showSuccessScreen(errors ? 'Partially Saved' : 'Time Logged!', currentUser.name + ' — ' + selectedSession.jobName, results);
 }
 
-// âââ Success ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Success ──────────────────────────────────────────────────────────────────
 function showSuccessScreen(title, sub, entries) {
   document.getElementById('succ-title').textContent = title;
   document.getElementById('succ-sub').textContent = sub;
@@ -548,7 +548,7 @@ function showSuccessScreen(title, sub, entries) {
   showScreen('s-success');
 }
 
-// âââ Admin ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Admin ────────────────────────────────────────────────────────────────────
 function showAdmin() { showScreen('s-admin'); adminTab('crew'); }
 function adminTab(tab) {
   ['crew','sessions','settings'].forEach(t => {
@@ -565,8 +565,8 @@ function renderCrew() {
       <div class="crew-avatar">${initials(u.name)}</div>
       <div class="crew-info"><div class="crew-name">${u.name}</div><div class="crew-pin">PIN: ${u.pin}</div></div>
       <div style="display:flex;gap:8px;">
-        <div class="icon-btn" onclick="editCrew(${i})">âï¸</div>
-        <div class="icon-btn" onclick="removeCrew(${i})">ð</div>
+        <div class="icon-btn" onclick="editCrew(${i})">✏️</div>
+        <div class="icon-btn" onclick="removeCrew(${i})">🗑</div>
       </div>
     </div>`).join('');
 }
@@ -579,8 +579,8 @@ function renderAdminSessions() {
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="session-job">${u?.name||'Unknown'}</div><span class="active-badge">ACTIVE</span>
       </div>
-      <div class="session-meta">${s.jobName} Â· In at ${fmtTime(s.startedAt)} Â· ${elapsed(s.startedAt).toFixed(1)} hrs</div>
-      <div class="session-items">${s.costItems.map(c => c.name).join(' Â· ')}</div>
+      <div class="session-meta">${s.jobName} · In at ${fmtTime(s.startedAt)} · ${elapsed(s.startedAt).toFixed(1)} hrs</div>
+      <div class="session-items">${s.costItems.map(c => c.name).join(' · ')}</div>
     </div>`;
   }).join('');
 }
@@ -633,13 +633,13 @@ function removeCrew(i) {
   crew.splice(i, 1); saveCrew(); renderCrew();
 }
 
-// âââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function goHome() { pinEntry=''; updateDots(); currentUser=null; selectedSession=null; selectedJob=null; document.getElementById('pin-err').textContent=''; closeModal(); showScreen('s-home'); }
 function elapsed(startedAt) { return (Date.now() - new Date(startedAt).getTime()) / 3600000; }
 function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
 
-// âââ API ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── API ──────────────────────────────────────────────────────────────────────
 async function callJT(body) {
   const res = await fetch('/api/jobtread', {
     method: 'POST',
@@ -650,7 +650,7 @@ async function callJT(body) {
   return res.json();
 }
 
-// âââ Init âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Init ─────────────────────────────────────────────────────────────────────
 loadStorage();
 </script>
 </body>
@@ -662,15 +662,15 @@ loadStorage();
       }, createdTimeEntry: { id: {} } } } });
       offsetMs += entryMs;
       results.push({ label: items[i].name, value: hrs.toFixed(2) + ' hrs (' + pct + '%)' });
-    } catch { errors++; results.push({ label: items[i].name + ' â ', value: 'Failed to save' }); }
+    } catch { errors++; results.push({ label: items[i].name + ' ⚠', value: 'Failed to save' }); }
   }
   sessions[currentUser.id] = (sessions[currentUser.id] || []).filter(s => s.key !== selectedSession.key);
   saveSessions();
   btn.disabled = false; btn.textContent = 'Submit & Clock Out';
-  showSuccessScreen(errors ? 'Partially Saved' : 'Time Logged!', currentUser.name + ' â ' + selectedSession.jobName, results);
+  showSuccessScreen(errors ? 'Partially Saved' : 'Time Logged!', currentUser.name + ' — ' + selectedSession.jobName, results);
 }
 
-// âââ Success ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Success ──────────────────────────────────────────────────────────────────
 function showSuccessScreen(title, sub, entries) {
   document.getElementById('succ-title').textContent = title;
   document.getElementById('succ-sub').textContent = sub;
@@ -678,7 +678,7 @@ function showSuccessScreen(title, sub, entries) {
   showScreen('s-success');
 }
 
-// âââ Admin ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Admin ────────────────────────────────────────────────────────────────────
 function showAdmin() { showScreen('s-admin'); adminTab('crew'); }
 function adminTab(tab) {
   ['crew','sessions','settings'].forEach(t => {
@@ -695,8 +695,8 @@ function renderCrew() {
       <div class="crew-avatar">${initials(u.name)}</div>
       <div class="crew-info"><div class="crew-name">${u.name}</div><div class="crew-pin">PIN: ${u.pin}</div></div>
       <div style="display:flex;gap:8px;">
-        <div class="icon-btn" onclick="editCrew(${i})">âï¸</div>
-        <div class="icon-btn" onclick="removeCrew(${i})">ð</div>
+        <div class="icon-btn" onclick="editCrew(${i})">✏️</div>
+        <div class="icon-btn" onclick="removeCrew(${i})">🗑</div>
       </div>
     </div>`).join('');
 }
@@ -709,8 +709,8 @@ function renderAdminSessions() {
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="session-job">${u?.name||'Unknown'}</div><span class="active-badge">ACTIVE</span>
       </div>
-      <div class="session-meta">${s.jobName} Â· In at ${fmtTime(s.startedAt)} Â· ${elapsed(s.startedAt).toFixed(1)} hrs</div>
-      <div class="session-items">${s.costItems.map(c => c.name).join(' Â· ')}</div>
+      <div class="session-meta">${s.jobName} · In at ${fmtTime(s.startedAt)} · ${elapsed(s.startedAt).toFixed(1)} hrs</div>
+      <div class="session-items">${s.costItems.map(c => c.name).join(' · ')}</div>
     </div>`;
   }).join('');
 }
@@ -763,13 +763,13 @@ function removeCrew(i) {
   crew.splice(i, 1); saveCrew(); renderCrew();
 }
 
-// âââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function goHome() { pinEntry=''; updateDots(); currentUser=null; selectedSession=null; selectedJob=null; document.getElementById('pin-err').textContent=''; closeModal(); showScreen('s-home'); }
 function elapsed(startedAt) { return (Date.now() - new Date(startedAt).getTime()) / 3600000; }
 function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
 
-// âââ API ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── API ──────────────────────────────────────────────────────────────────────
 async function callJT(body) {
   const res = await fetch('/api/jobtread', {
     method: 'POST',
@@ -780,7 +780,7 @@ async function callJT(body) {
   return res.json();
 }
 
-// âââ Init âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Init ─────────────────────────────────────────────────────────────────────
 loadStorage();
 </script>
 </body>
