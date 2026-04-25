@@ -6,12 +6,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const publicPath = path.join(__dirname, 'public');
-app.use(express.static(publicPath));
-
-const JOBTREAD_GRANT_KEY = process.env.JOBTREAD_GRANT_KEY || '';
+const JOBTREAD_GRANT_KEY = process.env.JOBTREAD_GRANT_KEY || '22TNNMMpHK5dpWvxunGCAGi5QAwRmi6LSc';
 const JOBTREAD_API = 'https://api.jobtread.com/pave';
 
+// API route MUST come before static files
 app.post('/api/jobtread', async (req, res) => {
   try {
     const query = req.body;
@@ -31,6 +29,10 @@ app.post('/api/jobtread', async (req, res) => {
   }
 });
 
+// Static files AFTER API routes
+app.use(express.static(path.join(__dirname, 'public')));
+
+// SPA fallback - LAST
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -38,5 +40,4 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Kinley Clock running on port ${PORT}`);
-  console.log(`Serving static files from: ${publicPath}`);
 });
