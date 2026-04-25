@@ -14,19 +14,11 @@ app.post('/api/jobtread', async (req, res) => {
   try {
     const query = req.body;
 
-    // Inject grantKey at the top-level query.$ AND inside each operation's $
-    // so it works for both read queries and mutations
+    // Inject grantKey at the top-level query.$ only.
+    // JobTread Pave API accepts grantKey at query.$ for auth but rejects it
+    // inside individual operation $ fields (e.g. createTimeEntry.$).
     if (query.query) {
-      // Top-level $ (works for most read queries)
       query.query['$'] = { ...query.query['$'], grantKey: JOBTREAD_GRANT_KEY };
-
-      // Also inject into every operation's $ (required for mutations)
-      for (const key of Object.keys(query.query)) {
-        if (key !== '$' && query.query[key] && typeof query.query[key] === 'object') {
-          if (!query.query[key]['$']) query.query[key]['$'] = {};
-          query.query[key]['$'] = { ...query.query[key]['$'], grantKey: JOBTREAD_GRANT_KEY };
-        }
-      }
     }
 
     const response = await fetch(JOBTREAD_API, {
