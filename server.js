@@ -13,19 +13,50 @@ const JOBTREAD_API = 'https://api.jobtread.com/pave';
 app.post('/api/jobtread', async (req, res) => {
   try {
     const query = req.body;
+
+    // Inject grantKey at the top-level query.$ AND inside each operation's $
+    // so it works for both read queries and mutations
     if (query.query) {
+      // Top-level $ (works for most read queries)
       query.query['$'] = { ...query.query['$'], grantKey: JOBTREAD_GRANT_KEY };
+
+      // Also inject into every operation's $ (required for mutations)
+      for (const key of Object.keys(query.query)) {
+        if (key !== '$' && query.query[key] && typeof query.query[key] === 'object') {
+          if (!query.query[key]['$']) query.query[key]['$'] = {};
+          query.query[key]['$'] = { ...query.query[key]['$'], grantKey: JOBTREAD_GRANT_KEY };
+        }
+      }
     }
+
     const response = await fetch(JOBTREAD_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(query),
     });
-    const data = await response.json();
-    res.json(data);
+
+    // Read as text first so we can diagnose non-JSON responses
+    const text = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (jsonErr) {
+      // JobTread returned non-JSON -- likely an auth or format error
+      console.error('JobTread non-JSON response:', response.status, text.substring(0, 500));
+      return res.status(502).json({
+        error: 'Non-JSON response from JobTread',
+        jobtreadStatus: response.status,
+        body: text.substring(0, 1000)
+      });
+    }
+
+    // Forward JobTread's status code so the client can see errors too
+    res.status(response.ok ? 200 : response.status).json(data);
+
   } catch (err) {
-    console.error('JobTread proxy error:', err);
-    res.status(500).json({ error: 'Proxy request failed' });
+    console.error('JobTread proxy error:', err.message);
+    res.status(500).json({ error: 'Proxy request failed', message: err.message });
   }
 });
 
