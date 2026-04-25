@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KC Clock">
+<title>Kinley Construction — Time Clock</title>
+<style>
+  :root {
+    --orange: #F47920;
+    --black: #111111;
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --border: #e0e0e0;
+    --text: #1a1a1a;
+    --text-muted: #666666;
+    --text-light: #999999;
+    --danger-bg: #fff0ec;
+    --danger: #c0392b;
+    --success-bg: #eafaf1;
+    --success: #1a7a45;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); font-family: Arial, sans-serif; color: var(--text); }
+
+  .app { max-width: 520px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); }
+
+  /* Header */
+  .header { background: var(--black); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .header-wordmark { font-size: 17px; font-weight: 700; color: #fff; }
+  .header-dot { color: var(--orange); }
+  .header-sub { font-size: 11px; color: #888; margin-top: 1px; }
+  .header-time { font-size: 15px; color: #ccc; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .header-date { font-size: 11px; color: #888; margin-top: 1px; text-align: right; }
+
+  /* Content */
+  .content { flex: 1; padding: 18px 16px; overflow-y: auto; position: relative; }
+
+  /* Screens */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Mode bar */
+  .mode-bar { display: flex; margin-bottom: 20px; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--orange); }
+  .mode-btn { flex: 1; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; background: transparent; color: var(--orange); font-family: Arial, sans-serif; }
+  .mode-btn.active { background: var(--orange); color: #fff; }
+
+  /* PIN */
+  .pin-display { display: flex; justify-content: center; gap: 16px; margin: 22px 0; }
+  .pin-dot { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--orange); background: transparent; transition: background 0.1s; }
+  .pin-dot.filled { background: var(--orange); }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 300px; margin: 0 auto 16px; }
+  .key { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 0; font-size: 26px; font-weight: 500; cursor: pointer; text-align: center; color: var(--text); user-select: none; min-height: 70px; display: flex; align-items: center; justify-content: center; transition: background 0.1s; font-family: Arial, sans-serif; }
+  .key:active { background: #f0f0f0; }
+  .key.del { font-size: 20px; color: var(--text-muted); }
+  .key.ghost { opacity: 0; pointer-events: none; }
+
+  /* Buttons */
+  .btn { display: block; width: 100%; padding: 15px; border-radius: var(--radius); font-size: 16px; font-weight: 700; cursor: pointer; border: none; margin-bottom: 12px; text-align: center; font-family: Arial, sans-serif; }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+  .btn-primary { background: var(--orange); color: #fff; }
+  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5c6c6; }
+  .btn-sm { padding: 10px 16px; font-size: 14px; width: auto; display: inline-block; margin-bottom: 0; }
+
+  /* Labels */
+  .sec-label { font-size: 11px; font-weight: 700; color: var(--orange); text-transform: uppercase; letter-spacing: 0.9px; margin-bottom: 8px; }
+  .err { color: var(--danger); font-size: 13px; text-align: center; min-height: 18px; margin-bottom: 8px; }
+
+  /* Job list */
+  .job-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .job-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: border-color 0.1s; }
+  .job-card.selected { border: 2.5px solid var(--orange); background: #fff9f5; }
+  .job-card-info { flex: 1; }
+  .job-card-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .job-card-addr { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .dist-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .dist-near { background: var(--success-bg); color: var(--success); }
+  .dist-mid { background: #FEF0E3; color: #b85c00; }
+  .dist-far { background: #f0f0f0; color: var(--text-muted); }
+  .nearest-tag { background: var(--orange); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+
+  /* Cost items */
+  .cost-list-wrap { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 0 14px; margin-bottom: 16px; max-height: 210px; overflow-y: auto; }
+  .cost-cb { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .cost-cb:last-child { border-bottom: none; }
+  .cost-cb input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--orange); cursor: pointer; flex-shrink: 0; }
+  .cost-cb span { font-size: 15px; color: var(--text); }
+
+  /* Session cards */
+  .session-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 12px; }
+  .session-job { font-size: 16px; font-weight: 700; color: var(--text); }
+  .session-meta { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .session-items { font-size: 12px; color: var(--text-light); margin-top: 6px; }
+  .active-badge { background: var(--success-bg); color: var(--success); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+  .timer { color: var(--orange); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* Split */
+  .split-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: var(--card); border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--border); }
+  .split-name { flex: 1; font-size: 15px; color: var(--text); }
+  .pct-input { width: 72px; padding: 9px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 16px; text-align: right; font-family: Arial, sans-serif; }
+  .pct-total { font-size: 14px; font-weight: 700; text-align: right; margin-bottom: 12px; padding: 10px 14px; border-radius: var(--radius-sm); }
+  .pct-total.ok { background: var(--success-bg); color: var(--success); }
+  .pct-total.bad { background: #fdf0ef; color: var(--danger); }
+
+  /* Success */
+  .succ-wrap { text-align: center; padding: 20px 0; }
+  .check-circle { width: 72px; height: 72px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+  .check-circle svg { width: 36px; height: 36px; stroke: #fff; fill: none; stroke-width: 3; }
+  .succ-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .succ-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+  .entries-box { background: var(--bg); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 20px; text-align: left; border: 1px solid var(--border); }
+  .entry-row { display: flex; justify-content: space-between; font-size: 14px; padding: 5px 0; border-bottom: 1px solid var(--border); color: var(--text); }
+  .entry-row:last-child { border-bottom: none; }
+  .entry-val { font-weight: 700; }
+
+  /* Admin */
+  .admin-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .admin-badge { background: var(--orange); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+  .tab-bar { display: flex; margin-bottom: 16px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+  .tab-btn { flex: 1; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; background: #f0f0f0; color: var(--text-muted); font-family: Arial, sans-serif; }
+  .tab-btn.active { background: var(--card); color: var(--orange); }
+  .crew-card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 13px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .crew-avatar { width: 42px; height: 42px; border-radius: 50%; background: #FEF0E3; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--orange); flex-shrink: 0; }
+  .crew-info { flex: 1; }
+  .crew-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .crew-pin { font-size: 13px; color: var(--text-muted); }
+  .icon-btn { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; }
+  .text-input { width: 100%; padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 16px; margin-bottom: 10px; font-family: Arial, sans-serif; }
+
+  /* Modal */
+  .modal-layer { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.55); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal-layer.open { display: flex; }
+  .modal-box { background: var(--card); border-radius: 16px; padding: 22px 18px; width: 100%; max-width: 340px; }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+
+  /* Misc */
+  .no-items { text-align: center; padding: 30px 20px; color: var(--text-muted); font-size: 14px; }
+  .loading-row { display: flex; align-items: center; gap: 10px; padding: 16px; color: var(--text-muted); font-size: 14px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--orange); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loc-bar { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 14px; font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); }
+  .loc-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+  .loc-dot.green { background: #27ae60; }
+  .loc-dot.orange { background: var(--orange); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="header-wordmark">Kinley<span class="header-dot"> ●</span> Construction</div>
+      <div class="header-sub">Labor Time Clock</div>
+    </div>
+    <div>
+      <div class="header-time" id="hclock"></div>
+      <div class="header-date" id="hdate"></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- HOME -->
+    <div id="s-home" class="screen active">
+      <div class="mode-bar">
+        <button class="mode-btn active" id="btn-in" onclick="setMode('in')">Clock In</button>
+        <button class="mode-btn" id="btn-out" onclick="setMode('out')">Clock Out</button>
+      </div>
+      <div class="sec-label" style="text-align:center;">Enter your PIN</div>
+      <div class="pin-display">
+        <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+        <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+      </div>
+      <div class="keypad">
+        <div class="key" onclick="pk('1')">1</div><div class="key" onclick="pk('2')">2</div><div class="key" onclick="pk('3')">3</div>
+        <div class="key" onclick="pk('4')">4</div><div class="key" onclick="pk('5')">5</div><div class="key" onclick="pk('6')">6</div>
+        <div class="key" onclick="pk('7')">7</div><div class="key" onclick="pk('8')">8</div><div class="key" onclick="pk('9')">9</div>
+        <div class="key del" onclick="pk('del')">⌫</div><div class="key" onclick="pk('0')">0</div><div class="key ghost"></div>
+      </div>
+      <div class="err" id="pin-err"></div>
+    </div>
+
+    <!-- CLOCK IN -->
+    <div id="s-clockin" class="screen">
+      <div class="sec-label" id="ci-name"></div>
+      <div class="loc-bar"><div class="loc-dot" id="loc-dot"></div><span id="loc-status">Detecting location...</span></div>
+      <div class="sec-label">Select Job</div>
+      <div id="ci-jobs" class="job-list"><div class="loading-row"><div class="spinner"></div>Loading jobs from JobTread...</div></div>
+      <div id="ci-cost-section" style="display:none;">
+        <div class="sec-label">Cost items you'll be working on</div>
+        <div class="cost-list-wrap" id="ci-costs"></div>
+      </div>
+      <button class="btn btn-primary" id="ci-submit" onclick="submitClockIn()" disabled>Clock In Now</button>
+      <button class="btn btn-secondary" onclick="goHome()">Cancel</button>
+    </div>
+
+    <!-- CLOCK OUT -->
+    <div id="s-clockout" class="screen">
+      <div class="sec-label" id="co-name"></div>
+      <div id="co-sessions"></div>
+      <button class="btn btn-secondary" onclick="goHome()" style="margin-top:4px;">Cancel</button>
+    </div>
+
+    <!-- SPLIT -->
+    <div id="s-split" class="screen">
+      <div class="sec-label">Assign Labor Split</div>
+      <div style="font-size:13px;color:#666;margin-bottom:14px;" id="sp-info"></div>
+      <div id="sp-items"></div>
+      <div class="pct-total bad" id="sp-total">Total: 0%</div>
+      <div class="err" id="sp-err"></div>
+      <button class="btn btn-primary" id="sp-submit" onclick="submitClockOut()" disabled>Submit &amp; Clock Out</button>
+      <button class="btn btn-secondary" onclick="showScreen('s-clockout')">Back</button>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="s-success" class="screen">
+      <div class="succ-wrap">
+        <div class="check-circle"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="succ-title" id="succ-title"></div>
+        <div class="succ-sub" id="succ-sub"></div>
+        <div class="entries-box" id="succ-entries"></div>
+        <button class="btn btn-primary" onclick="goHome()">Done</button>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div id="s-admin" class="screen">
+      <div class="admin-hdr">
+        <span style="font-size:18px;font-weight:700;">Admin Panel</span>
+        <span class="admin-badge">ADMIN</span>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="adminTab('crew')" id="tab-crew">Crew &amp; PINs</button>
+        <button class="tab-btn" onclick="adminTab('sessions')" id="tab-sessions">Active Sessions</button>
+        <button class="tab-btn" onclick="adminTab('settings')" id="tab-settings">Settings</button>
+      </div>
+      <div id="admin-crew">
+        <button class="btn btn-primary btn-sm" style="margin-bottom:14px;" onclick="showAddCrew()">+ Add Crew Member</button>
+        <div id="crew-list"></div>
+      </div>
+      <div id="admin-sessions" style="display:none;"><div id="sessions-list"></div></div>
+      <div id="admin-settings" style="display:none;">
+        <div class="sec-label">Admin PIN</div>
+        <input class="text-input" id="new-admin-pin" maxlength="4" type="tel" placeholder="New 4-digit PIN">
+        <button class="btn btn-primary" style="margin-bottom:20px;" onclick="changeAdminPin()">Update Admin PIN</button>
+        <div class="sec-label">Job Cache</div>
+        <p style="font-size:13px;color:#666;margin-bottom:12px;">Cost items are cached per job to speed things up. Clear if you've added new cost items to a job recently.</p>
+        <button class="btn btn-secondary" onclick="costItemsCache={};alert('Cache cleared. Cost items will reload fresh next clock-in.');">Clear Cost Items Cache</button>
+      </div>
+      <button class="btn btn-secondary" style="margin-top:10px;" onclick="goHome()">Exit Admin</button>
+    </div>
+
+  </div><!-- content -->
+
+  <!-- Modal -->
+  <div class="modal-layer" id="modal-layer">
+    <div class="modal-box" id="modal-box"></div>
+  </div>
+
+</div><!-- app -->
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+const ORG_ID = '22P8NB5kStzY';
+
+const DEFAULT_CREW = [
+  {id:'22P8jRwaY3kz',name:'Richard Brooke',pin:'1001'},
+  {id:'22P9avQeuW5a',name:'Anthony Nalbone',pin:'1002'},
+  {id:'22P9xrkjHnSU',name:'Chris Cyr',pin:'1003'},
+  {id:'22PJre6pQw2W',name:'Ryan Montgomery',pin:'1004'},
+  {id:'22PKGMfELCYe',name:'Dusty Bjork',pin:'1005'},
+  {id:'22PL6CWNPrjt',name:'Ray Domas',pin:'1006'},
+  {id:'22PQFSGLwB6T',name:'Jason Kinley',pin:'1007'},
+  {id:'22PQdsMqyBfz',name:'Jarod Robb',pin:'1008'},
+  {id:'22PRaMKfbgGU',name:'Sam Thomsen',pin:'1009'},
+  {id:'22PRdUFu5rFz',name:'Travis',pin:'1010'},
+  {id:'22PS4QNGBif5',name:'Josh Harty',pin:'1011'},
+  {id:'22PSHfvBpY77',name:'Bill',pin:'1012'},
+  {id:'22PSLk4CuW5w',name:'Wayne',pin:'1013'},
+  {id:'22PSPjH6Fmwu',name:'Tim Murry',pin:'1014'},
+  {id:'22PT77e3UiTL',name:'Nathan Emmans',pin:'1015'},
+  {id:'22PTJCvzwJaC',name:'Al Durazo',pin:'1016'},
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let mode = 'in', pinEntry = '', currentUser = null, selectedSession = null;
+let crew = [], sessions = {}, adminPin = '1234', costItemsCache = {};
+let userLat = null, userLon = null, selectedJob = null, liveJobs = [];
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
+const S = {
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+function loadStorage() {
+  crew = S.get('kc-crew') || [...DEFAULT_CREW];
+  sessions = S.get('kc-sessions') || {};
+  adminPin = S.get('kc-adminpin') || '1234';
+}
+function saveCrew() { S.set('kc-crew', crew); }
+function saveSessions() { S.set('kc-sessions', sessions); }
+function saveAdminPin() { S.set('kc-adminpin', adminPin); }
+
+// ─── Clock header ─────────────────────────────────────────────────────────────
+function updateClock() {
+  const n = new Date();
+  document.getElementById('hclock').textContent = n.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('hdate').textContent = n.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'});
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ─── PIN ──────────────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-in').classList.toggle('active', m === 'in');
+  document.getElementById('btn-out').classList.toggle('active', m === 'out');
+  pinEntry = ''; updateDots(); document.getElementById('pin-err').textContent = '';
+}
+function pk(k) {
+  if (k === 'del') { pinEntry = pinEntry.slice(0,-1); updateDots(); return; }
+  if (pinEntry.length >= 4) return;
+  pinEntry += k; updateDots();
+  if (pinEntry.length === 4) setTimeout(verifyPin, 120);
+}
+function updateDots() {
+  for (let i = 0; i < 4; i++) document.getElementById('d'+i).classList.toggle('filled', i < pinEntry.length);
+}
+function verifyPin() {
+  if (pinEntry === adminPin) { pinEntry = ''; updateDots(); showAdmin(); return; }
+  const u = crew.find(u => u.pin === pinEntry);
+  if (!u) { document.getElementById('pin-err').textContent = 'Incorrect PIN. Try again.'; pinEntry = ''; updateDots(); return; }
+  document.getElementById('pin-err').textContent = '';
+  currentUser = u;
+  mode === 'in' ? showClockIn() : showClockOut();
+}
+
+// ─── Location ─────────────────────────────────────────────────────────────────
+function getLocation() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      p => { userLat = p.coords.latitude; userLon = p.coords.longitude; resolve({lat:userLat,lon:userLon}); },
+      () => resolve(null),
+      { timeout: 6000, maximumAge: 60000 }
+    );
+  });
+}
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 3958.8, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ─── Clock In ─────────────────────────────────────────────────────────────────
+async function showClockIn() {
+  showScreen('s-clockin');
+  selectedJob = null;
+  document.getElementById('ci-name').textContent = 'Welcome, ' + currentUser.name;
+  document.getElementById('ci-submit').disabled = true;
+  document.getElementById('ci-cost-section').style.display = 'none';
+  document.getElementById('ci-jobs').innerHTML = '<div class="loading-row"><div class="spinner"></div>Loading jobs from JobTread...</div>';
+  const locDot = document.getElementById('loc-dot');
+  const locStatus = document.getElementById('loc-status');
+  locDot.className = 'loc-dot orange'; locStatus.textContent = 'Detecting location...';
+  const [locResult, jobsResult] = await Promise.all([getLocation(), fetchLiveJobs()]);
+  if (locResult) {
+    locDot.className = 'loc-dot green';
+    locStatus.textContent = 'Location found — nearest jobs shown first';
+  } else {
+    locDot.className = 'loc-dot';
+    locStatus.textContent = 'Location unavailable — showing all jobs';
+  }
+  liveJobs = jobsResult;
+  renderJobList(liveJobs);
+}
+
+async function fetchLiveJobs() {
+  try {
+    const data = await callJT({ query: { organization: { '$': { id: ORG_ID }, jobs: { '$': { size: 100, sortBy: [{ field: 'name', order: 'asc' }], where: ['closedOn', null] }, nodes: { id: {}, name: {}, location: { formattedAddress: {}, latitude: {}, longitude: {} } } } } } });
+    return data.organization?.jobs?.nodes || [];
+  } catch { return []; }
+}
+
+function renderJobList(jobs) {
+  if (!jobs.length) { document.getElementById('ci-jobs').innerHTML = '<div class="no-items">No open jobs found in JobTread.</div>'; return; }
+  let sorted = [...jobs];
+  if (userLat !== null) {
+    sorted = sorted.map(j => ({ ...j, dist: (j.location?.latitude && j.location?.longitude) ? haversine(userLat, userLon, j.location.latitude, j.location.longitude) : 9999 }));
+    sorted.sort((a, b) => a.dist - b.dist);
+  }
+  document.getElementById('ci-jobs').innerHTML = sorted.map((j, i) => {
+    const mi = (j.dist !== undefined && j.dist < 9999) ? j.dist : null;
+    let badge = '';
+    if (mi !== null) {
+      const label = mi < 0.1 ? 'On site' : mi < 1 ? Math.round(mi * 5280) + ' ft' : mi.toFixed(1) + ' mi';
+      const cls = mi < 0.5 ? 'dist-near' : mi < 5 ? 'dist-mid' : 'dist-far';
+      badge = `<span class="dist-badge ${cls}">${label}</span>`;
+    }
+    const nearTag = (i === 0 && mi !== null && mi < 2) ? '<span class="nearest-tag">NEAREST</span>' : '';
+    const addr = j.location?.formattedAddress ? j.location.formattedAddress.replace(', USA', '') : '';
+    return `<div class="job-card" id="jc-${j.id}" onclick="selectJob('${j.id}')">
+      <div class="job-card-info">
+        <div class="job-card-name">${j.name}${nearTag}</div>
+        ${addr ? `<div class="job-card-addr">${addr}</div>` : ''}
+      </div>${badge}
+    </div>`;
+  }).join('');
+}
+
+async function selectJob(jobId) {
+  selectedJob = liveJobs.find(j => j.id === jobId) || { id: jobId, name: jobId };
+  document.querySelectorAll('.job-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('jc-' + jobId);
+  if (card) card.classList.add('selected');
+  document.getElementById('ci-cost-section').style.display = 'block';
+  document.getElementById('ci-submit').disabled = true;
+  await loadCostItems(jobId);
+}
+
+async function loadCostItems(jobId) {
+  const div = document.getElementById('ci-costs');
+  if (costItemsCache[jobId]) { renderCostItems(costItemsCache[jobId]); return; }
+  div.innerHTML = '<div class="loading-row"><div class="spinner"></div>Loading cost items...</div>';
+  try {
+    const data = await callJT({ query: { job: { '$': { id: jobId }, costItems: { '$': { size: 50 }, nodes: { id: {}, name: {} } } } } });
+    const items = data.job?.costItems?.nodes || [];
+    costItemsCache[jobId] = items;
+    renderCostItems(items);
+  } catch { div.innerHTML = '<div class="no-items">Failed to load cost items.</div>'; }
+}
+
+function renderCostItems(items) {
+  const div = document.getElementById('ci-costs');
+  if (!items.length) { div.innerHTML = '<div class="no-items">No cost items on this job.</div>'; return; }
+  div.innerHTML = items.map(c => `<label class="cost-cb"><input type="checkbox" value="${c.id}" data-name="${c.name}" onchange="updateCIBtn()"><span>${c.name}</span></label>`).join('');
+}
+function updateCIBtn() {
+  document.getElementById('ci-submit').disabled = ![...document.querySelectorAll('#ci-costs input:checked')].length;
+}
+
+async function submitClockIn() {
+  if (!selectedJob) { alert('Please select a job'); return; }
+  const checked = [...document.querySelectorAll('#ci-costs input:checked')];
+  if (!checked.length) { alert('Select at least one cost item'); return; }
+  const btn = document.getElementById('ci-submit');
+  btn.disabled = true; btn.textContent = 'Clocking in...';
+  const now = new Date().toISOString();
+  const costItems = checked.map(c => ({ id: c.value, name: c.dataset.name }));
+  if (!sessions[currentUser.id]) sessions[currentUser.id] = [];
+  sessions[currentUser.id].push({ key: currentUser.id + '_' + Date.now(), jobId: selectedJob.id, jobName: selectedJob.name, costItems, startedAt: now });
+  saveSessions();
+  btn.disabled = false; btn.textContent = 'Clock In Now';
+  showSuccessScreen('Clocked In!', currentUser.name + ' on ' + selectedJob.name, [{ label: 'Started at', value: fmtTime(now) }]);
+}
+
+// ─── Clock Out ────────────────────────────────────────────────────────────────
+function showClockOut() {
+  showScreen('s-clockout');
+  document.getElementById('co-name').textContent = 'Active sessions — ' + currentUser.name;
+  const userSessions = sessions[currentUser.id] || [];
+  const c = document.getElementById('co-sessions');
+  if (!userSessions.length) { c.innerHTML = '<div class="no-items">No active clock-ins found.</div>'; return; }
+  c.innerHTML = userSessions.map((s, i) => `
+    <div class="session-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div class="session-job">${s.jobName}</div><span class="active-badge">ACTIVE</span>
+      </div>
+      <div class="session-meta">In at ${fmtTime(s.startedAt)} &bull; <span class="timer" id="t${i}"></span></div>
+      <div class="session-items">${s.costItems.map(c => c.name).join(' · ')}</div>
+      <button class="btn btn-danger" style="margin-top:12px;padding:11px;" onclick="startSplit(${i})">Clock Out &amp; Split Time</button>
+    </div>`).join('');
+  userSessions.forEach((s, i) => { const el = document.getElementById('t' + i); if (el) startTimer(el, s.startedAt); });
+}
+
+function startTimer(el, startedAt) {
+  function tick() {
+    const d = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+    el.textContent = (Math.floor(d/3600) ? Math.floor(d/3600)+'h ' : '') + Math.floor((d%3600)/60) + 'm ' + (d%60) + 's';
+  }
+  tick(); setInterval(tick, 1000);
+}
+
+// ─── Split ────────────────────────────────────────────────────────────────────
+function startSplit(idx) {
+  selectedSession = (sessions[currentUser.id] || [])[idx];
+  showScreen('s-split');
+  const hrs = elapsed(selectedSession.startedAt);
+  document.getElementById('sp-info').textContent = selectedSession.jobName + ' — In at ' + fmtTime(selectedSession.startedAt) + ' (' + hrs.toFixed(2) + ' hrs total)';
+  const items = selectedSession.costItems;
+  const even = Math.round(100 / items.length);
+  document.getElementById('sp-items').innerHTML = items.map((c, i) => `
+    <div class="split-row">
+      <div class="split-name">${c.name}</div>
+      <input class="pct-input" type="number" min="0" max="100" step="1" value="${i === items.length-1 ? 100-(even*(items.length-1)) : even}" id="pct${i}" oninput="updateTotal()">
+      <span style="font-size:14px;color:#999;">%</span>
+    </div>`).join('');
+  updateTotal();
+}
+
+function updateTotal() {
+  const inputs = document.querySelectorAll('[id^="pct"]');
+  let total = 0; inputs.forEach(i => total += parseInt(i.value) || 0);
+  const el = document.getElementById('sp-total');
+  el.textContent = 'Total: ' + total + '%';
+  el.className = 'pct-total ' + (total === 100 ? 'ok' : 'bad');
+  document.getElementById('sp-submit').disabled = total !== 100;
+  document.getElementById('sp-err').textContent = total !== 100 ? 'Percentages must add up to 100%' : '';
+}
+
+async function submitClockOut() {
+  const inputs = document.querySelectorAll('[id^="pct"]');
+  if ([...inputs].reduce((s, i) => s + (parseInt(i.value)||0), 0) !== 100) return;
+  const btn = document.getElementById('sp-submit');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  const endedAt = new Date().toISOString();
+  const totalHrs = elapsed(selectedSession.startedAt);
+  const items = selectedSession.costItems;
+  const results = []; let errors = 0;
+  for (let i = 0; i < items.length; i++) {
+    const pct = parseInt(document.getElementById('pct' + i).value) || 0;
+    if (!pct) continue;
+    const hrs = totalHrs * pct / 100;
+    try {
+      await callJT({ query: { createTimeEntry: { '$': {
+        organizationId: ORG_ID, userId: currentUser.id, jobId: selectedSession.jobId,
+        costItemId: items[i].id, startedAt: selectedSession.startedAt, endedAt: endedAt,
+        type: 'regular', notes: pct + '% of ' + totalHrs.toFixed(2) + 'h = ' + hrs.toFixed(2) + 'h (split entry)'
+      }, createdTimeEntry: { id: {} } } } });
+      results.push({ label: items[i].name, value: hrs.toFixed(2) + ' hrs (' + pct + '%)' });
+    } catch { errors++; results.push({ label: items[i].name + ' ⚠', value: 'Failed to save' }); }
+  }
+  sessions[currentUser.id] = (sessions[currentUser.id] || []).filter(s => s.key !== selectedSession.key);
+  saveSessions();
+  btn.disabled = false; btn.textContent = 'Submit & Clock Out';
+  showSuccessScreen(errors ? 'Partially Saved' : 'Time Logged!', currentUser.name + ' — ' + selectedSession.jobName, results);
+}
+
+// ─── Success ──────────────────────────────────────────────────────────────────
+function showSuccessScreen(title, sub, entries) {
+  document.getElementById('succ-title').textContent = title;
+  document.getElementById('succ-sub').textContent = sub;
+  document.getElementById('succ-entries').innerHTML = entries.map(e => `<div class="entry-row"><span>${e.label}</span><span class="entry-val">${e.value}</span></div>`).join('');
+  showScreen('s-success');
+}
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+function showAdmin() { showScreen('s-admin'); adminTab('crew'); }
+function adminTab(tab) {
+  ['crew','sessions','settings'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
+    document.getElementById('admin-'+t).style.display = t === tab ? 'block' : 'none';
+  });
+  if (tab === 'crew') renderCrew();
+  if (tab === 'sessions') renderAdminSessions();
+}
+function initials(n) { return n.split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase(); }
+function renderCrew() {
+  document.getElementById('crew-list').innerHTML = crew.map((u, i) => `
+    <div class="crew-card">
+      <div class="crew-avatar">${initials(u.name)}</div>
+      <div class="crew-info"><div class="crew-name">${u.name}</div><div class="crew-pin">PIN: ${u.pin}</div></div>
+      <div style="display:flex;gap:8px;">
+        <div class="icon-btn" onclick="editCrew(${i})">✏️</div>
+        <div class="icon-btn" onclick="removeCrew(${i})">🗑</div>
+      </div>
+    </div>`).join('');
+}
+function renderAdminSessions() {
+  const all = Object.entries(sessions).flatMap(([uid, arr]) => arr.map(s => ({...s, userId: uid})));
+  if (!all.length) { document.getElementById('sessions-list').innerHTML = '<div class="no-items">No active clock-ins right now.</div>'; return; }
+  document.getElementById('sessions-list').innerHTML = all.map(s => {
+    const u = crew.find(u => u.id === s.userId);
+    return `<div class="session-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="session-job">${u?.name||'Unknown'}</div><span class="active-badge">ACTIVE</span>
+      </div>
+      <div class="session-meta">${s.jobName} · In at ${fmtTime(s.startedAt)} · ${elapsed(s.startedAt).toFixed(1)} hrs</div>
+      <div class="session-items">${s.costItems.map(c => c.name).join(' · ')}</div>
+    </div>`;
+  }).join('');
+}
+function changeAdminPin() {
+  const v = document.getElementById('new-admin-pin').value.trim();
+  if (!/^\d{4}$/.test(v)) { alert('Enter a 4-digit PIN'); return; }
+  adminPin = v; saveAdminPin();
+  document.getElementById('new-admin-pin').value = '';
+  alert('Admin PIN updated to ' + v);
+}
+function showModal(html) { document.getElementById('modal-box').innerHTML = html; document.getElementById('modal-layer').classList.add('open'); }
+function closeModal() { document.getElementById('modal-layer').classList.remove('open'); }
+function editCrew(i) {
+  const u = crew[i];
+  showModal(`<div class="modal-title">Edit ${u.name}</div>
+    <div class="sec-label" style="margin-bottom:6px;">Name</div><input class="text-input" id="en" value="${u.name}">
+    <div class="sec-label" style="margin-bottom:6px;">PIN (4 digits)</div><input class="text-input" id="ep" value="${u.pin}" maxlength="4" type="tel">
+    <div class="sec-label" style="margin-bottom:6px;">JobTread User ID</div><input class="text-input" id="eu" value="${u.id}">
+    <button class="btn btn-primary" onclick="saveCrew2(${i})">Save</button>
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>`);
+}
+function saveCrew2(i) {
+  const name = document.getElementById('en').value.trim();
+  const pin = document.getElementById('ep').value.trim();
+  const uid = document.getElementById('eu').value.trim();
+  if (!name || !/^\d{4}$/.test(pin)) { alert('Name and 4-digit PIN required'); return; }
+  if (crew.some((u, idx) => u.pin === pin && idx !== i)) { alert('PIN already in use'); return; }
+  crew[i] = {...crew[i], name, pin, id: uid};
+  saveCrew(); closeModal(); renderCrew();
+}
+function showAddCrew() {
+  showModal(`<div class="modal-title">Add Crew Member</div>
+    <div class="sec-label" style="margin-bottom:6px;">Name</div><input class="text-input" id="an" placeholder="Full name">
+    <div class="sec-label" style="margin-bottom:6px;">PIN (4 digits)</div><input class="text-input" id="ap" maxlength="4" type="tel" placeholder="0000">
+    <div class="sec-label" style="margin-bottom:6px;">JobTread User ID</div><input class="text-input" id="au" placeholder="Find in JobTread settings">
+    <button class="btn btn-primary" onclick="addCrew()">Add</button>
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>`);
+}
+function addCrew() {
+  const name = document.getElementById('an').value.trim();
+  const pin = document.getElementById('ap').value.trim();
+  const uid = document.getElementById('au').value.trim();
+  if (!name || !/^\d{4}$/.test(pin)) { alert('Name and 4-digit PIN required'); return; }
+  if (crew.some(u => u.pin === pin)) { alert('PIN already in use'); return; }
+  crew.push({ id: uid || 'pending-' + Date.now(), name, pin });
+  saveCrew(); closeModal(); renderCrew();
+}
+function removeCrew(i) {
+  if (!confirm('Remove ' + crew[i].name + '?')) return;
+  crew.splice(i, 1); saveCrew(); renderCrew();
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function goHome() { pinEntry=''; updateDots(); currentUser=null; selectedSession=null; selectedJob=null; document.getElementById('pin-err').textContent=''; closeModal(); showScreen('s-home'); }
+function elapsed(startedAt) { return (Date.now() - new Date(startedAt).getTime()) / 3600000; }
+function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function callJT(body) {
+  const res = await fetch('/api/jobtread', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('API error ' + res.status);
+  return res.json();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadStorage();
+</script>
+</body>
+</html>
