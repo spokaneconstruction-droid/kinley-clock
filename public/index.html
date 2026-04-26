@@ -437,7 +437,9 @@ async function loadCostItems(jobId) {
 function renderCostItems(items) {
   const div = document.getElementById('ci-costs');
   if (!items.length) { div.innerHTML = '<div class="no-items">No cost items on this job.</div>'; return; }
-  div.innerHTML = items.map(c => `<label class="cost-cb"><input type="checkbox" value="${c.id}" data-name="${c.name}" onchange="updateCIBtn()"><span>${c.name}</span></label>`).join('');
+  const _activeSessions = sessions[currentUser.id] || [];
+  const _activeIds = new Set(_activeSessions.flatMap(s => s.costItems.map(ci => ci.id)));
+  div.innerHTML = items.map(c => { const busy = _activeIds.has(c.id); return '<label class="cost-cb" style="' + (busy ? 'opacity:0.5;cursor:not-allowed;' : '') + '"><input type="checkbox" value="' + c.id + '" data-name="' + c.name + '" onchange="updateCIBtn()"' + (busy ? ' disabled' : '') + '><span>' + c.name + (busy ? ' <em style="font-style:normal;font-size:12px;color:#e74c3c;">(Active)</em>' : '') + '</span></label>'; }).join('');
 }
 function updateCIBtn() {
   document.getElementById('ci-submit').disabled = ![...document.querySelectorAll('#ci-costs input:checked')].length;
@@ -447,6 +449,10 @@ async function submitClockIn() {
   if (!selectedJob) { alert('Please select a job'); return; }
   const checked = [...document.querySelectorAll('#ci-costs input:checked')];
   if (!checked.length) { alert('Select at least one cost item'); return; }
+  const _clkActiveSessions = sessions[currentUser.id] || [];
+  const _clkActiveIds = new Set(_clkActiveSessions.flatMap(s => s.costItems.map(ci => ci.id)));
+  const _conflicts = checked.filter(c => _clkActiveIds.has(c.value));
+  if (_conflicts.length) { alert('Already clocked into: ' + _conflicts.map(c => c.dataset.name).join(', ')); return; }
   const btn = document.getElementById('ci-submit');
   btn.disabled = true; btn.textContent = 'Clocking in...';
   const now = new Date().toISOString();
