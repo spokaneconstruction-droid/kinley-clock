@@ -534,7 +534,7 @@ async function submitClockOut() {
       await callJT({ query: { createTimeEntry: { '$': {
         organizationId: ORG_ID, userId: currentUser.id, jobId: selectedSession.jobId,
         costItemId: items[i].id, startedAt: entryStart, endedAt: entryEnd,
-        type: 'regular', notes: pct + '% of shift (' + hrs.toFixed(2) + 'h)'
+        type: 'standard', notes: pct + '% of shift (' + hrs.toFixed(2) + 'h)'
       }, createdTimeEntry: { id: {} } } } });
       offsetMs += entryMs;
       results.push({ label: items[i].name, value: hrs.toFixed(2) + ' hrs (' + pct + '%)' });
