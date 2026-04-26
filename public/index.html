@@ -468,12 +468,13 @@ function showClockOut() {
   c.innerHTML = userSessions.map((s, i) => `
     <div class="session-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-        <div class="session-job">${s.jobName}</div><span class="active-badge">ACTIVE</span>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="chk${i}" style="width:18px;height:18px;accent-color:#e74c3c;" onclick="event.stopPropagation()"><div class="session-job">${s.jobName}</div></label><span class="active-badge">ACTIVE</span>
       </div>
       <div class="session-meta">In at ${fmtTime(s.startedAt)} &bull; <span class="timer" id="t${i}"></span></div>
       <div class="session-items">${s.costItems.map(c => c.name).join(' ? ')}</div>
       <button class="btn btn-danger" style="margin-top:12px;padding:11px;" onclick="startSplit(${i})">Clock Out &amp; Split Time</button>
     </div>`).join('');
+  c.innerHTML += '<button class="btn btn-primary" style="margin-top:16px;width:100%;padding:14px;font-size:16px;" onclick="showMultiSplit()">&#10003; Clock Out All Selected</button>';
   userSessions.forEach((s, i) => { const el = document.getElementById('t' + i); if (el) startTimer(el, s.startedAt); });
 }
 
@@ -658,6 +659,82 @@ async function callJT(body) {
 
 // --- Init ------------------------------------------------------------
 loadStorage();
+
+// --- Multi Split ---
+function showMultiSplit() {
+  const userSessions = sessions[currentUser.id] || [];
+  const selected = userSessions.filter((s, i) => { const chk = document.getElementById('chk' + i); return chk && chk.checked; });
+  if (!selected.length) { alert('Please check at least one session to clock out.'); return; }
+  window._multiSessions = selected;
+  showScreen('s-split');
+  document.getElementById('sp-info').textContent = selected.length + ' session(s) selected - assign % for each cost item';
+  let html = '';
+  selected.forEach((s, si) => {
+    const hrs = elapsed(s.startedAt);
+    const items = s.costItems;
+    const even = Math.round(100 / items.length);
+    html += '<div style="background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:12px;">';
+    html += '<div style="font-weight:600;margin-bottom:8px;">' + s.jobName + ' (' + hrs.toFixed(2) + ' hrs)</div>';
+    items.forEach((c, ii) => {
+      const val = ii === items.length - 1 ? 100 - (even * (items.length - 1)) : even;
+      html += '<div class="split-row"><div class="split-name">' + c.name + '</div><input class="pct-input" type="number" min="0" max="100" step="1" value="' + val + '" id="mpct_' + si + '_' + ii + '" oninput="updateMultiTotal()"><span style="font-size:14px;color:#999;">%</span></div>';
+    });
+    html += '<div id="mtotal_' + si + '" class="pct-total ok" style="margin-top:4px;font-size:13px;"></div>';
+    html += '</div>';
+  });
+  document.getElementById('sp-items').innerHTML = html;
+  document.getElementById('sp-submit').onclick = submitMultiClockOut;
+  document.getElementById('sp-total').style.display = 'none';
+  updateMultiTotal();
+}
+function updateMultiTotal() {
+  const selected = window._multiSessions || [];
+  let allOk = true;
+  selected.forEach((s, si) => {
+    let total = 0;
+    s.costItems.forEach((c, ii) => { const el = document.getElementById('mpct_' + si + '_' + ii); total += parseInt(el ? el.value : 0) || 0; });
+    const el = document.getElementById('mtotal_' + si);
+    if (el) { el.textContent = 'Total: ' + total + '%'; el.className = 'pct-total ' + (total === 100 ? 'ok' : 'bad'); }
+    if (total !== 100) allOk = false;
+  });
+  document.getElementById('sp-submit').disabled = !allOk;
+  document.getElementById('sp-err').textContent = allOk ? '' : 'Each session must add up to 100%';
+}
+async function submitMultiClockOut() {
+  const selected = window._multiSessions || [];
+  if (!selected.length) return;
+  const btn = document.getElementById('sp-submit');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  const allResults = []; let totalErrors = 0;
+  for (let si = 0; si < selected.length; si++) {
+    const s = selected[si];
+    const endedAt = new Date().toISOString();
+    const totalHrs = elapsed(s.startedAt);
+    const totalMs = new Date(endedAt) - new Date(s.startedAt);
+    let offsetMs = 0;
+    const items = s.costItems;
+    for (let i = 0; i < items.length; i++) {
+      const pct = parseInt(document.getElementById('mpct_' + si + '_' + i).value) || 0;
+      if (!pct) continue;
+      const entryMs = totalMs * pct / 100;
+      const entryStart = new Date(new Date(s.startedAt).getTime() + offsetMs).toISOString();
+      const entryEnd = new Date(new Date(s.startedAt).getTime() + offsetMs + entryMs).toISOString();
+      const hrs = totalHrs * pct / 100;
+      try {
+        await callJT({ query: { createTimeEntry: { $: { organizationId: ORG_ID, userId: currentUser.id, jobId: s.jobId, costItemId: items[i].id, startedAt: entryStart, endedAt: entryEnd, type: 'standard', notes: pct + '% of shift (' + hrs.toFixed(2) + 'h)' }, createdTimeEntry: { id: {} } } } });
+        offsetMs += entryMs;
+        allResults.push({ label: s.jobName + ': ' + items[i].name, value: hrs.toFixed(2) + ' hrs (' + pct + '%)' });
+      } catch { totalErrors++; allResults.push({ label: s.jobName + ': ' + items[i].name + ' [!]', value: 'Failed' }); }
+    }
+    sessions[currentUser.id] = (sessions[currentUser.id] || []).filter(sess => sess.key !== s.key);
+  }
+  saveSessions();
+  window._multiSessions = null;
+  btn.disabled = false; btn.textContent = 'Submit & Clock Out';
+  document.getElementById('sp-submit').onclick = submitClockOut;
+  document.getElementById('sp-total').style.display = '';
+  showSuccessScreen(totalErrors ? 'Partially Saved' : 'Time Logged!', currentUser.name + ' - ' + selected.length + ' session(s)', allResults);
+}
 </script>
 </body>
 </html>
